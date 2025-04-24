@@ -1,9 +1,8 @@
-const {generateTSFromFMP} = require('./fmp-schema-to-ts');
-
-require('dotenv').config();
+import {config} from './fmp-codegen.config.js';
+import {generateTSFromFMP} from './fmp-schema-to-ts.js';
 
 generateTSFromFMP(
-    process.env.FMP_API_URL,
-    process.env.FMP_AUTH_TOKEN,
-    process.env.OUTPUT_PATH,
+    config.FMP_API_URL,
+    config.FMP_AUTH_TOKEN,
+    config.OUTPUT_PATH,
 );
