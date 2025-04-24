@@ -1,70 +1,15 @@
-const fs = require('fs');
-const path = require('path');
-const axios = require('axios');
-const https = require('https');
+import {createGroupDir, generateGroupIndex, safeCleanDir} from './tools/fs-tools.js';
+import {fetchFMPSchema} from './tools/network-tools.js';
+import fs from 'fs';
+import path from 'path';
 
 const INDENT = 2;
-
-/**
- * Создаёт папку для группы интерфейсов.
- */
-function createGroupDir(outputDir, groupName) {
-    const dir = path.join(outputDir, groupName);
-    if (!fs.existsSync(dir)) {
-        fs.mkdirSync(dir, {recursive: true});
-    }
-    return dir;
-}
-
-/**
- * Генерирует index.ts с экспортами для группы.
- */
-function generateGroupIndex(groupDir, interfaces) {
-    const content = interfaces
-        .map(name => `export * from './${name}';`)
-        .join('\n');
-    fs.writeFileSync(path.join(groupDir, 'index.ts'), content);
-}
 
 function hasFields(input) {
     return (
         (input.scalar && input.scalar?.length > 0) ||
         (input.tabular && input.tabular?.length > 0)
     );
-}
-
-/**
- * Безопасная очистка папки (с обработкой ошибок)
- */
-function safeCleanDir(outputDir) {
-    try {
-        // Проверяем существование папки
-        if (!fs.existsSync(outputDir)) {
-            fs.mkdirSync(outputDir, { recursive: true });
-            return;
-        }
-
-        // Читаем содержимое папки
-        const files = fs.readdirSync(outputDir);
-
-        // Удаляем только файлы и пустые подпапки
-        for (const file of files) {
-            const filePath = path.join(outputDir, file);
-            const stat = fs.lstatSync(filePath);
-
-            if (stat.isDirectory()) {
-                // Рекурсивно очищаем подпапку
-                safeCleanDir(filePath);
-                fs.rmSync(filePath); // Удаляем пустую папку
-            } else {
-                // Удаляем файл
-                fs.unlinkSync(filePath);
-            }
-        }
-    } catch (error) {
-        console.error(`⚠️ Ошибка очистки папки ${outputDir}:`, error.message);
-        // Продолжаем работу, даже если не удалось очистить
-    }
 }
 
 /**
@@ -83,34 +28,6 @@ function getTSType(fmpType) {
         b: 'number'  // BIGINT (бинарный)
     };
     return typeMap[fmpType] || 'any';
-}
-
-/**
- * Загружает схему FMP по API.
- * @param {string} url - URL API FMP.
- * @param {string} authToken - Токен для заголовка Authorization.
- * @returns {Promise<object>} - JSON-схема.
- * @throws {Error} - Если запрос неудачный.
- */
-async function fetchFMPSchema(url, authToken) {
-    if (!authToken) {
-        throw new Error('Токен авторизации обязателен!');
-    }
-
-    try {
-        const agent = new https.Agent({rejectUnauthorized: false});
-        const response = await axios.get(url, {
-            headers: {
-                'Authorization': `Bearer ${authToken}`,
-                'Content-Type': 'application/json'
-            },
-            httpsAgent: agent,
-        });
-
-        return response.data;
-    } catch (error) {
-        throw new Error(`Ошибка загрузки схемы: ${error.response?.status || error.message}`);
-    }
 }
 
 function sanitizeInterfaceName(name) {
@@ -231,4 +148,4 @@ async function generateTSFromFMP(apiUrl, authToken, outputDir) {
     }
 }
 
-module.exports = {generateTSFromFMP};
+export {generateTSFromFMP};
